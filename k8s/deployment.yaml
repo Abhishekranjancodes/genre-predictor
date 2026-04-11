@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roberta-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: roberta-backend
+  template:
+    metadata:
+      labels:
+        app: roberta-backend
+    spec:
+      containers:
+      - name: backend
+        image: deadmonk/roberta-backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: HF_REPO_ID
+          value: "silvermonkey/roberta-genre-classifier"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: roberta-backend
+  ports:
+    port: 8000
+    targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roberta-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: roberta-frontend
+  template:
+    metadata:
+      labels:
+        app: roberta-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: deadmonk/roberta-frontend:latest
+        ports:
+        - containerPort: 8501
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: roberta-frontend
+  ports:
+    port: 8501
+    targetPort: 8501
