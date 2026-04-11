@@ -24,7 +24,7 @@ pipeline {
 
         stage('Automated Unit Tests') {
             steps {
-                sh './venv/bin/python3 -m pytest app/model_handler.py'
+                sh './venv/bin/python3 -m pytest tests/'
             }
         }
 
