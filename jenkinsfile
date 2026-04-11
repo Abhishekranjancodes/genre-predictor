@@ -1,0 +1,34 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_HUB_USER = 'deadmonk' // Replace with your Docker Hub username
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm // Jenkins fetches updated code 
+            }
+        }
+        stage('Automated Testing') {
+            steps {
+                // Running a simple test to ensure the model logic loads
+                sh 'python3 -m pytest app/model_handler.py' 
+            }
+        }
+        stage('Build & Push Images') {
+            steps {
+                sh "docker build -t ${DOCKER_HUB_USER}/roberta-backend -f Dockerfile.backend ."
+                sh "docker build -t ${DOCKER_HUB_USER}/roberta-frontend -f Dockerfile.frontend ."
+                // Pushing to Docker Hub is mandatory [cite: 20]
+                sh "docker push ${DOCKER_HUB_USER}/roberta-backend"
+                sh "docker push ${DOCKER_HUB_USER}/roberta-frontend"
+            }
+        }
+        stage('Deploy to Target') {
+            steps {
+                // Triggering the deployment to Kubernetes or target system
+                sh 'docker-compose up -d' 
+            }
+        }
+    }
+}
