@@ -1,34 +1,58 @@
 pipeline {
     agent any
+
     environment {
-        DOCKER_HUB_USER = 'deadmonk' // Replace with your Docker Hub username
+        DOCKER_HUB_USER = 'deadmonk'
+        HF_REPO_ID      = 'silvermonkey/roberta-genre-classifier'
+        
+        DOCKER_HUB_CREDS = credentials('docker-hub-login')
+        HF_TOKEN         = credentials('hugging-face-token')
     }
+
     stages {
         stage('Checkout') {
             steps {
-                checkout scm // Jenkins fetches updated code 
+                checkout scm
             }
         }
-        stage('Automated Testing') {
+
+        stage('Environment Setup') {
             steps {
-                // Running a simple test to ensure the model logic loads
-                sh 'python3 -m pytest app/model_handler.py' 
+                sh 'python3 -m venv venv'
+                sh './venv/bin/pip install -r requirements.txt huggingface_hub pytest'
             }
         }
-        stage('Build & Push Images') {
+
+        stage('Automated Unit Tests') {
             steps {
-                sh "docker build -t ${DOCKER_HUB_USER}/roberta-backend -f Dockerfile.backend ."
-                sh "docker build -t ${DOCKER_HUB_USER}/roberta-frontend -f Dockerfile.frontend ."
-                // Pushing to Docker Hub is mandatory [cite: 20]
-                sh "docker push ${DOCKER_HUB_USER}/roberta-backend"
-                sh "docker push ${DOCKER_HUB_USER}/roberta-frontend"
+                sh './venv/bin/python3 -m pytest app/model_handler.py'
             }
         }
-        stage('Deploy to Target') {
+
+        stage('Docker Build & Push') {
             steps {
-                // Triggering the deployment to Kubernetes or target system
-                sh 'docker-compose up -d' 
+                script {
+                    sh "docker build -t ${DOCKER_HUB_USER}/roberta-backend -f Dockerfile.backend ."
+                    sh "docker build -t ${DOCKER_HUB_USER}/roberta-frontend -f Dockerfile.frontend ."
+                    sh "echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
+                    sh "docker push ${DOCKER_HUB_USER}/roberta-backend"
+                    sh "docker push ${DOCKER_HUB_USER}/roberta-frontend"
+                }
             }
+        }
+
+        stage('K8s Deployment') {
+            steps {
+                sh 'kubectl apply -f k8s/deployment.yaml'
+                sh 'kubectl rollout restart deployment/roberta-backend'
+                sh 'kubectl rollout restart deployment/roberta-frontend'
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
         }
     }
 }
