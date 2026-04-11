@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_HUB_USER = 'deadmonk'
         HF_REPO_ID      = 'silvermonkey/roberta-genre-classifier'
-        
+        #creds
         DOCKER_HUB_CREDS = credentials('dockerhub-creds')
         HF_TOKEN         = credentials('hugging-face-token')
     }
