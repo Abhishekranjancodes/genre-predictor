@@ -42,9 +42,13 @@ pipeline {
 
         stage('K8s Deployment') {
             steps {
-                sh 'kubectl apply -f k8s/deployment.yaml'
-                sh 'kubectl rollout restart deployment/roberta-backend'
-                sh 'kubectl rollout restart deployment/roberta-frontend'
+                withCredentials([file(credentialsId: 'KUBECONFIG_CRED', variable: 'KUBECONFIG_FILE')]) {
+                    script {
+                        sh "KUBECONFIG=${KUBECONFIG_FILE} kubectl apply -f k8s/deployment.yaml --validate=false"
+                        sh "KUBECONFIG=${KUBECONFIG_FILE} kubectl rollout restart deployment/roberta-backend"
+                        sh "KUBECONFIG=${KUBECONFIG_FILE} kubectl rollout restart deployment/roberta-frontend"
+                    }
+                }
             }
         }
     }
