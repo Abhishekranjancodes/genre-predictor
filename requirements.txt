@@ -1,8 +1,12 @@
-fastapi
-uvicorn
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
 transformers
 scikit-learn
 numpy
+fastapi
+uvicorn
 pydantic
 streamlit
+requests
+huggingface_hub
+pytest
