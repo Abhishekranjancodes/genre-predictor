@@ -5,7 +5,7 @@ pipeline {
         DOCKER_HUB_USER = 'deadmonk'
         HF_REPO_ID      = 'silvermonkey/roberta-genre-classifier'
         
-        DOCKER_HUB_CREDS = credentials('docker-hub-login')
+        DOCKER_HUB_CREDS = credentials('dockerhub-creds')
         HF_TOKEN         = credentials('hugging-face-token')
     }
 
