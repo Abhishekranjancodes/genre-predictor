@@ -29,8 +29,8 @@ spec:
   selector:
     app: roberta-backend
   ports:
-    port: 8000
-    targetPort: 8000
+    - port: 8000        
+      targetPort: 8000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -61,5 +61,5 @@ spec:
   selector:
     app: roberta-frontend
   ports:
-    port: 8501
-    targetPort: 8501
+    - port: 8501       
+      targetPort: 8501
