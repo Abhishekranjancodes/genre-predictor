@@ -19,9 +19,7 @@ if st.button("Classify Genre"):
     else:
         with st.spinner("Analyzing text with RoBERTa..."):
             try:
-                # The backend URL (pointing to your FastAPI container/service)
-                # In Phase 4, this will change to your Kubernetes service name
-                backend_url = "http://localhost:8000/predict" 
+                backend_url = "http://backend-service:8000/predict" 
                 
                 payload = {
                     "text": text_input,
