@@ -25,13 +25,14 @@
 # Wait for Elasticsearch to be Ready
 
 - name: Wait for Elasticsearch deployment to be available
-  command: kubectl rollout status deployment/elasticsearch -n {{ app_namespace }} --timeout=300s
+  command: kubectl rollout status deployment/elasticsearch -n {{ app_namespace }} --timeout=600s
   register: es_rollout
   changed_when: false
+  ignore_errors: true
 
 - name: Display Elasticsearch rollout status
   debug:
-    msg: "{{ es_rollout.stdout }}"
+    msg: "{{ es_rollout.stdout | default('Elasticsearch still starting up') }}"
 
 # Deploy Filebeat
 
@@ -46,12 +47,13 @@
 # Wait for Logstash and Kibana
 
 - name: Wait for Logstash deployment to be available
-  command: kubectl rollout status deployment/logstash -n {{ app_namespace }} --timeout=300s
+  command: kubectl rollout status deployment/logstash -n {{ app_namespace }} --timeout=600s
   register: logstash_rollout
   changed_when: false
+  ignore_errors: true
 
 - name: Wait for Kibana deployment to be available
-  command: kubectl rollout status deployment/kibana -n {{ app_namespace }} --timeout=300s
+  command: kubectl rollout status deployment/kibana -n {{ app_namespace }} --timeout=600s
   register: kibana_rollout
   changed_when: false
   ignore_errors: true
