@@ -80,27 +80,20 @@
 
 # Verify Elasticsearch Health
 
-- name: Get Elasticsearch ClusterIP
-  command: kubectl get svc elasticsearch -n {{ app_namespace }} -o jsonpath='{.spec.clusterIP}'
-  register: es_ip
-  changed_when: false
-
-- name: Check Elasticsearch cluster health
-  uri:
-    url: "http://{{ es_ip.stdout }}:9200/_cluster/health"
-    method: GET
-    return_content: true
-    timeout: 30
+- name: Check Elasticsearch cluster health via kubectl
+  command: >
+    kubectl run es-health-check --image=busybox --restart=Never --rm -i
+    --namespace={{ app_namespace }}
+    -- wget -qO- --timeout=10 http://elasticsearch:9200/_cluster/health
   register: es_health
-  retries: 5
+  retries: 3
   delay: 15
-  until: es_health.status == 200
-  when: es_ip.stdout | length > 0
+  until: es_health.rc == 0
   ignore_errors: true
 
 - name: Display Elasticsearch cluster health
   debug:
-    msg: "Elasticsearch health: {{ es_health.json | default('Not reachable yet check pod status') }}"
+    msg: "Elasticsearch health: {{ es_health.stdout | default('Not reachable yet check pod status') }}"
   when: es_health is defined
 
 # Summary

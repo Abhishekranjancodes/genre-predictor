@@ -26,29 +26,20 @@
 
 # Health Check
 
-- name: Get backend service ClusterIP
-  command: kubectl get svc backend-service -n {{ app_namespace }} -o jsonpath='{.spec.clusterIP}'
-  register: backend_ip
-  changed_when: false
-  ignore_errors: true
-
-- name: Health check on backend API
-  uri:
-    url: "http://{{ backend_ip.stdout }}:8000/health"
-    method: GET
-    return_content: true
-    timeout: 30
+- name: Health check on backend API via kubectl
+  command: >
+    kubectl run backend-health-check --image=busybox --restart=Never --rm -i
+    --namespace={{ app_namespace }}
+    -- wget -qO- --timeout=10 http://backend-service:8000/health
   register: health_result
-  retries: 5
-  delay: 10
-  until: health_result.status == 200
-  when: backend_ip.stdout is defined and backend_ip.stdout | length > 0
+  retries: 3
+  delay: 15
+  until: health_result.rc == 0
   ignore_errors: true
 
 - name: Display health check result
   debug:
-    msg: "Backend health: {{ health_result.json | default('Health check not reachable verify pod network') }}"
-  when: health_result is defined
+    msg: "Backend health: {{ health_result.stdout | default('Health check not reachable verify pod network') }}"
 
 # Resource Usage
 
