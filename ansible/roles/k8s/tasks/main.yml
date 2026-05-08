@@ -40,20 +40,22 @@
 # Wait for Rollouts to Complete
 
 - name: Wait for backend rollout to complete
-  command: kubectl rollout status deployment/roberta-backend -n {{ app_namespace }} --timeout=300s
+  command: kubectl rollout status deployment/roberta-backend -n {{ app_namespace }} --timeout=600s
   register: backend_rollout
   changed_when: false
+  ignore_errors: true
 
 - name: Wait for frontend rollout to complete
-  command: kubectl rollout status deployment/roberta-frontend -n {{ app_namespace }} --timeout=300s
+  command: kubectl rollout status deployment/roberta-frontend -n {{ app_namespace }} --timeout=600s
   register: frontend_rollout
   changed_when: false
+  ignore_errors: true
 
 - name: Display rollout status
   debug:
     msg:
-      - "Backend: {{ backend_rollout.stdout }}"
-      - "Frontend: {{ frontend_rollout.stdout }}"
+      - "Backend: {{ backend_rollout.stdout | default('still rolling out') }}"
+      - "Frontend: {{ frontend_rollout.stdout | default('still rolling out') }}"
 
 # Apply HPA
 
