@@ -3,7 +3,7 @@
 # Purpose: Deploy application to Kubernetes and configure HPA
 
 - name: Check if kubectl is installed
-  command: kubectl version --client --short
+  command: kubectl version --client
   register: kubectl_version
   changed_when: false
   ignore_errors: true

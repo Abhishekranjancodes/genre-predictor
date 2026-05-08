@@ -15,7 +15,7 @@
 # Deploy ELK Stack
 
 - name: Deploy Elasticsearch, Logstash, and Kibana
-  command: kubectl apply -f {{ project_root }}/k8s/elk-stack.yaml -n {{ app_namespace }}
+  command: kubectl apply -f {{ project_root }}/k8s/elk.yaml -n {{ app_namespace }}
   register: elk_apply
 
 - name: Display ELK deploy status
