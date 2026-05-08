@@ -1,0 +1,116 @@
+---
+# Role: elk
+# Purpose: Deploy the ELK and Filebeat to Kubernetes for centralized log management
+
+# Deploy ConfigMaps First
+
+- name: Apply Logstash pipeline and settings ConfigMaps
+  command: kubectl apply -f {{ project_root }}/k8s/logstash-config.yaml -n {{ app_namespace }}
+  register: logstash_config_apply
+
+- name: Display Logstash config status
+  debug:
+    msg: "{{ logstash_config_apply.stdout_lines }}"
+
+# Deploy ELK Stack
+
+- name: Deploy Elasticsearch, Logstash, and Kibana
+  command: kubectl apply -f {{ project_root }}/k8s/elk-stack.yaml -n {{ app_namespace }}
+  register: elk_apply
+
+- name: Display ELK deploy status
+  debug:
+    msg: "{{ elk_apply.stdout_lines }}"
+
+# Wait for Elasticsearch to be Ready
+
+- name: Wait for Elasticsearch deployment to be available
+  command: kubectl rollout status deployment/elasticsearch -n {{ app_namespace }} --timeout=300s
+  register: es_rollout
+  changed_when: false
+
+- name: Display Elasticsearch rollout status
+  debug:
+    msg: "{{ es_rollout.stdout }}"
+
+# Deploy Filebeat
+
+- name: Deploy Filebeat DaemonSet and RBAC
+  command: kubectl apply -f {{ project_root }}/k8s/filebeat.yaml -n {{ app_namespace }}
+  register: filebeat_apply
+
+- name: Display Filebeat deploy status
+  debug:
+    msg: "{{ filebeat_apply.stdout_lines }}"
+
+# Wait for Logstash and Kibana
+
+- name: Wait for Logstash deployment to be available
+  command: kubectl rollout status deployment/logstash -n {{ app_namespace }} --timeout=300s
+  register: logstash_rollout
+  changed_when: false
+
+- name: Wait for Kibana deployment to be available
+  command: kubectl rollout status deployment/kibana -n {{ app_namespace }} --timeout=300s
+  register: kibana_rollout
+  changed_when: false
+  ignore_errors: true
+
+# Verify ELK Stack
+
+- name: Get ELK pod status
+  command: kubectl get pods -n {{ app_namespace }} -l 'app in (elasticsearch,logstash,kibana,filebeat)' -o wide
+  register: elk_pods
+  changed_when: false
+
+- name: Display ELK pod status
+  debug:
+    msg: "{{ elk_pods.stdout_lines }}"
+
+- name: Get ELK service endpoints
+  command: kubectl get svc -n {{ app_namespace }} elasticsearch logstash kibana
+  register: elk_services
+  changed_when: false
+
+- name: Display ELK service endpoints
+  debug:
+    msg: "{{ elk_services.stdout_lines }}"
+
+# Verify Elasticsearch Health
+
+- name: Get Elasticsearch ClusterIP
+  command: kubectl get svc elasticsearch -n {{ app_namespace }} -o jsonpath='{.spec.clusterIP}'
+  register: es_ip
+  changed_when: false
+
+- name: Check Elasticsearch cluster health
+  uri:
+    url: "http://{{ es_ip.stdout }}:9200/_cluster/health"
+    method: GET
+    return_content: true
+    timeout: 30
+  register: es_health
+  retries: 5
+  delay: 15
+  until: es_health.status == 200
+  when: es_ip.stdout | length > 0
+  ignore_errors: true
+
+- name: Display Elasticsearch cluster health
+  debug:
+    msg: "Elasticsearch health: {{ es_health.json | default('Not reachable yet check pod status') }}"
+  when: es_health is defined
+
+# Summary
+
+- name: ELK Stack deployment summary
+  debug:
+    msg:
+      - "ELK STACK SUMMARY"
+      - "Elasticsearch: {{ es_rollout.stdout | default('pending') }}"
+      - "Logstash:      {{ logstash_rollout.stdout | default('pending') }}"
+      - "Kibana:        {{ kibana_rollout.stdout | default('pending') }}"
+      - "Filebeat:      DaemonSet deployed"
+      - ""
+      - "Kibana UI accessible at: http://<node-ip>:5601"
+      - "Log index pattern: roberta-logs-*"

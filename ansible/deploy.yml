@@ -1,0 +1,22 @@
+---
+# deploy.yml — K8s-Only Deployment Playbook
+# Used when Docker images are already built and pushed.
+# Deploys to Kubernetes, sets up ELK logging, and verifies health.
+
+- name: "Movie/Book Genre Classifier - Deploy to Kubernetes"
+  hosts: deployment_server
+  gather_facts: true
+
+  vars:
+    project_root: "{{ playbook_dir }}/.."
+    app_namespace: default
+
+  roles:
+    - role: k8s
+      tags: [k8s, deploy]
+
+    - role: elk
+      tags: [elk, logging]
+
+    - role: monitoring
+      tags: [monitoring, verify]

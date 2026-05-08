@@ -1,0 +1,5 @@
+---
+# Default variables for the docker role
+docker_hub_user: deadmonk
+docker_hub_password: ""
+project_root: "{{ playbook_dir }}/.."

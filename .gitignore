@@ -4,3 +4,4 @@ __pycache__/
 .DS_Store
 artifacts/roberta_base_best.pt
 artifacts/mlb.pkl
+FinalProjectGuidelinesAndEvaluationCriteria.pdf

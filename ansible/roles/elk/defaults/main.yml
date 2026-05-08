@@ -1,0 +1,4 @@
+---
+#variables for the elk role
+app_namespace: default
+project_root: "{{ playbook_dir }}/.."

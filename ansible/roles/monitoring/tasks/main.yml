@@ -1,0 +1,76 @@
+---
+# Role: monitoring
+# Purpose: Verify deployment health and display service status
+
+# Verify Pod Status
+
+- name: Get all pods in namespace
+  command: kubectl get pods -n {{ app_namespace }} -o wide
+  register: pod_status
+  changed_when: false
+
+- name: Display pod status
+  debug:
+    msg: "{{ pod_status.stdout_lines }}"
+
+# Verify Services
+
+- name: Get all services in namespace
+  command: kubectl get svc -n {{ app_namespace }}
+  register: svc_status
+  changed_when: false
+
+- name: Display service status
+  debug:
+    msg: "{{ svc_status.stdout_lines }}"
+
+# Health Check
+
+- name: Get backend service ClusterIP
+  command: kubectl get svc backend-service -n {{ app_namespace }} -o jsonpath='{.spec.clusterIP}'
+  register: backend_ip
+  changed_when: false
+  ignore_errors: true
+
+- name: Health check on backend API
+  uri:
+    url: "http://{{ backend_ip.stdout }}:8000/health"
+    method: GET
+    return_content: true
+    timeout: 30
+  register: health_result
+  retries: 5
+  delay: 10
+  until: health_result.status == 200
+  when: backend_ip.stdout is defined and backend_ip.stdout | length > 0
+  ignore_errors: true
+
+- name: Display health check result
+  debug:
+    msg: "Backend health: {{ health_result.json | default('Health check not reachable verify pod network') }}"
+  when: health_result is defined
+
+# Resource Usage
+
+- name: Get resource usage of pods
+  command: kubectl top pods -n {{ app_namespace }}
+  register: pod_resources
+  changed_when: false
+  ignore_errors: true
+
+- name: Display resource usage
+  debug:
+    msg: "{{ pod_resources.stdout_lines | default(['Metrics server not available']) }}"
+
+# Deployment Summary
+
+- name: Get deployment details
+  command: kubectl get deployments -n {{ app_namespace }}
+  register: deploy_status
+  changed_when: false
+
+- name: Deployment summary
+  debug:
+    msg:
+      - "DEPLOYMENT SUMMARY"
+      - "{{ deploy_status.stdout_lines }}"

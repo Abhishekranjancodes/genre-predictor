@@ -7,7 +7,7 @@ def test_predictor_initialization():
     Verifies that the predictor can initialize and fetch 
     artifacts from Hugging Face without crashing.
     """
-    device = torch.device("cpu") # Use CPU for Jenkins environment
+    device = torch.device("cpu") 
     repo_id = "silvermonkey/roberta-genre-classifier"
     
     try:

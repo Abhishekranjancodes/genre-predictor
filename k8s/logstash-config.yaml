@@ -1,0 +1,70 @@
+# Logstash Pipeline receives logs from Filebeat, parses JSON, enriches with fields, and forwards to Elasticsearch
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-pipeline
+data:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+    }
+
+    filter {
+      # Parse the JSON log message emitted by the FastAPI backend
+      if [message] =~ /^\{/ {
+        json {
+          source => "message"
+          target => "app"
+          skip_on_invalid_json => true
+        }
+      }
+
+      # Add metadata fields
+      mutate {
+        add_field => {
+          "environment" => "production"
+          "project" => "roberta-genre-classifier"
+        }
+      }
+
+      # Parse timestamp from the app log if available
+      if [app][timestamp] {
+        date {
+          match => ["[app][timestamp]", "yyyy-MM-dd HH:mm:ss,SSS", "ISO8601"]
+          target => "@timestamp"
+        }
+      }
+
+      # Drop Filebeat internal monitoring logs to reduce noise
+      if [kubernetes][container][name] =~ /filebeat/ {
+        drop {}
+      }
+    }
+
+    output {
+      elasticsearch {
+        hosts => ["http://elasticsearch:9200"]
+        index => "roberta-logs-%{+YYYY.MM.dd}"
+      }
+      # Stdout for debugging (visible via kubectl logs on logstash pod)
+      stdout {
+        codec => rubydebug
+      }
+    }
+
+---
+# Logstash Settings
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+data:
+  logstash.yml: |
+    http.host: "0.0.0.0"
+    xpack.monitoring.enabled: false
+    pipeline.workers: 2
+    pipeline.batch.size: 125

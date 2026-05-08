@@ -1,0 +1,4 @@
+---
+# variables for the monitoring role
+app_namespace: default
+project_root: "{{ playbook_dir }}/.."

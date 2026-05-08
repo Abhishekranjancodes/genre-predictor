@@ -21,7 +21,7 @@ class GenrePredictor:
     def __init__(self, repo_id, device):
         self.device = device
         
-        print(f"Fetching artifacts from Hugging Face: {repo_id}...")
+        print(f"Fetching models from Hugging Face: {repo_id}...")
         weights_path = hf_hub_download(repo_id=repo_id, filename="roberta_base_best.pt")
         mlb_path = hf_hub_download(repo_id=repo_id, filename="mlb.pkl")
         

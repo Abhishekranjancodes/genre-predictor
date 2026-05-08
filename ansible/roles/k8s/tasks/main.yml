@@ -1,0 +1,74 @@
+---
+# Role: k8s
+# Purpose: Deploy application to Kubernetes and configure HPA
+
+- name: Check if kubectl is installed
+  command: kubectl version --client --short
+  register: kubectl_version
+  changed_when: false
+  ignore_errors: true
+
+- name: Fail if kubectl is not available
+  fail:
+    msg: "kubectl is not installed. Please install kubectl before running this playbook."
+  when: kubectl_version.rc != 0
+
+- name: Display kubectl version
+  debug:
+    msg: "kubectl found {{ kubectl_version.stdout }}"
+
+# Deploy Application Manifests
+
+- name: Apply Kubernetes deployment manifests
+  command: kubectl apply -f {{ project_root }}/k8s/deployment.yaml
+  register: k8s_apply
+
+- name: Display K8s apply output
+  debug:
+    msg: "{{ k8s_apply.stdout_lines }}"
+
+# Rolling Restart for Latest Images
+
+- name: Rolling restart backend deployment
+  command: kubectl rollout restart deployment/roberta-backend -n {{ app_namespace }}
+  register: restart_backend
+
+- name: Rolling restart frontend deployment
+  command: kubectl rollout restart deployment/roberta-frontend -n {{ app_namespace }}
+  register: restart_frontend
+
+# Wait for Rollouts to Complete
+
+- name: Wait for backend rollout to complete
+  command: kubectl rollout status deployment/roberta-backend -n {{ app_namespace }} --timeout=300s
+  register: backend_rollout
+  changed_when: false
+
+- name: Wait for frontend rollout to complete
+  command: kubectl rollout status deployment/roberta-frontend -n {{ app_namespace }} --timeout=300s
+  register: frontend_rollout
+  changed_when: false
+
+- name: Display rollout status
+  debug:
+    msg:
+      - "Backend: {{ backend_rollout.stdout }}"
+      - "Frontend: {{ frontend_rollout.stdout }}"
+
+# Apply HPA
+
+- name: Apply Horizontal Pod Autoscaler for backend
+  command: >
+    kubectl apply -f {{ project_root }}/k8s/hpa.yaml
+  register: hpa_apply
+  ignore_errors: true
+
+- name: Display HPA status
+  command: kubectl get hpa -n {{ app_namespace }}
+  register: hpa_status
+  changed_when: false
+  ignore_errors: true
+
+- name: Show HPA information
+  debug:
+    msg: "{{ hpa_status.stdout_lines | default(['HPA not configured']) }}"

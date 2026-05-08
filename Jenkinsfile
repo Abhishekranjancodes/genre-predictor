@@ -40,13 +40,14 @@ pipeline {
             }
         }
 
-        stage('K8s Deployment') {
+        stage('Deploy via Ansible') {
             steps {
                 withCredentials([file(credentialsId: 'KUBECONFIG_CRED', variable: 'KUBECONFIG_FILE')]) {
                     script {
-                        sh "KUBECONFIG=${KUBECONFIG_FILE} kubectl apply -f k8s/deployment.yaml --validate=false"
-                        sh "KUBECONFIG=${KUBECONFIG_FILE} kubectl rollout restart deployment/roberta-backend"
-                        sh "KUBECONFIG=${KUBECONFIG_FILE} kubectl rollout restart deployment/roberta-frontend"
+                        sh """
+                            export KUBECONFIG=${KUBECONFIG_FILE}
+                            cd ansible && ansible-playbook deploy.yml -v
+                        """
                     }
                 }
             }

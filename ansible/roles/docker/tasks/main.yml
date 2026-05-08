@@ -1,0 +1,115 @@
+---
+# Role: docker
+# Purpose: Install Docker, build and push application container images
+
+- name: Check if Docker is installed
+  command: docker --version
+  register: docker_version
+  changed_when: false
+  ignore_errors: true
+
+- name: Install Docker prerequisites
+  become: true
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: true
+  when: docker_version.rc != 0
+
+- name: Add Docker GPG key
+  become: true
+  shell: |
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  args:
+    creates: /usr/share/keyrings/docker-archive-keyring.gpg
+  when: docker_version.rc != 0
+
+- name: Add Docker repository
+  become: true
+  shell: |
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  args:
+    creates: /etc/apt/sources.list.d/docker.list
+  when: docker_version.rc != 0
+
+- name: Install Docker Engine
+  become: true
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+    update_cache: true
+  when: docker_version.rc != 0
+
+- name: Ensure current user is in the docker group
+  become: true
+  user:
+    name: "{{ ansible_user_id }}"
+    groups: docker
+    append: true
+  when: docker_version.rc != 0
+
+- name: Start and enable Docker service
+  become: true
+  systemd:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Verify Docker is running
+  command: docker info
+  register: docker_info
+  changed_when: false
+
+- name: Display Docker version
+  debug:
+    msg: "Docker is ready {{ docker_version.stdout }}"
+
+# Build Container Images
+- name: Build backend Docker image
+  command: >
+    docker build
+    -t {{ docker_hub_user }}/roberta-backend:latest
+    -f {{ project_root }}/Dockerfile.backend
+    {{ project_root }}
+  register: build_backend
+
+- name: Build frontend Docker image
+  command: >
+    docker build
+    -t {{ docker_hub_user }}/roberta-frontend:latest
+    -f {{ project_root }}/Dockerfile.frontend
+    {{ project_root }}
+  register: build_frontend
+
+- name: Display build results
+  debug:
+    msg:
+      - "Backend image built successfully"
+      - "Frontend image built successfully"
+
+# Push to Docker Hub
+
+- name: Log in to Docker Hub
+  command: docker login -u {{ docker_hub_user }} -p {{ docker_hub_password }}
+  no_log: true
+  when: docker_hub_password is defined and docker_hub_password | length > 0
+
+- name: Push backend image to Docker Hub
+  command: docker push {{ docker_hub_user }}/roberta-backend:latest
+  when: docker_hub_password is defined and docker_hub_password | length > 0
+
+- name: Push frontend image to Docker Hub
+  command: docker push {{ docker_hub_user }}/roberta-frontend:latest
+  when: docker_hub_password is defined and docker_hub_password | length > 0
+
+- name: Docker build & push complete
+  debug:
+    msg: "All Docker images built and pushed to {{ docker_hub_user }} on Docker Hub."

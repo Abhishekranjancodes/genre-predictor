@@ -1,0 +1,30 @@
+---
+# site.yml — Master Playbook
+# Orchestrates the full deployment pipeline:
+#   1. Docker: Build and push container images
+#   2. K8s:    Deploy to Kubernetes with HPA
+#   3. ELK:    Deploy logging stack
+#   4. Monitoring: Verify deployment health
+
+- name: "Movie/Book Genre Classifier – Full Deployment Pipeline"
+  hosts: deployment_server
+  gather_facts: true
+
+  vars:
+    project_root: "{{ playbook_dir }}/.."
+    docker_hub_user: deadmonk
+    docker_hub_password: "{{ lookup('env', 'DOCKER_HUB_PASSWORD') | default('', true) }}"
+    app_namespace: default
+
+  roles:
+    - role: docker
+      tags: [docker, build]
+
+    - role: k8s
+      tags: [k8s, deploy]
+
+    - role: elk
+      tags: [elk, logging]
+
+    - role: monitoring
+      tags: [monitoring, verify]

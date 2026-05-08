@@ -2,15 +2,15 @@ import streamlit as st
 import requests
 
 # Page configuration
-st.set_page_config(page_title="RoBERTa Genre Classifier", page_icon="🎬")
+st.set_page_config(page_title="Movie/Book Genre Classifier", page_icon="🎬")
 
-st.title("🎬 RoBERTa Genre Classifier")
+st.title("Movie/Book Genre Classifier")
 st.markdown("""
 This application uses a **RoBERTa-base** model to predict the genre of book summaries or movie plots.
 """)
 
 # Input section
-text_input = st.text_area("Enter Plot Summary:", placeholder="A retired soldier is forced back into action...", height=200)
+text_input = st.text_area("Enter the movie Plot or Book Summary:", placeholder="A retired soldier is forced back into action...", height=200)
 threshold = st.slider("Confidence Threshold", 0.1, 1.0, 0.75, help="Lower values increase sensitivity, higher values increase precision.")
 
 if st.button("Classify Genre"):
@@ -36,7 +36,6 @@ if st.button("Classify Genre"):
                     # Display Results
                     st.subheader("Predicted Genres")
                     if genres:
-                        # Display genres as colorful tags
                         genre_cols = st.columns(len(genres))
                         for i, g in enumerate(genres):
                             genre_cols[i].success(f"**{g}**")
@@ -55,4 +54,4 @@ if st.button("Classify Genre"):
                 st.error(f"Could not connect to backend. Is FastAPI running? Error: {e}")
 
 st.divider()
-st.caption("MLOps Project: Software Production Engineering (CSE 816)")
+st.caption("Made with ❤️ by Abhishek Ranjan and Abhishek Mandal")
